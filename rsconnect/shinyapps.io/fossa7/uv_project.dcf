@@ -1,0 +1,10 @@
+name: uv_project
+title:
+username: fossa7
+account: fossa7
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 16992291
+bundleId: 11764816
+url: https://fossa7.shinyapps.io/uv_project/
+version: 1
