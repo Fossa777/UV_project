@@ -10,7 +10,7 @@ library(dplyr)
 make_lamp_positions <- function(n, reactor_radius, lamp_offset_ratio = 0.55) {
   if (n <= 1) {
     return(data.frame(x = 0, y = 0))
-  }
+  } 
   
   r <- reactor_radius * lamp_offset_ratio
   ang <- seq(0, 2 * pi, length.out = n + 1)[-(n + 1)]
