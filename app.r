@@ -360,40 +360,40 @@ add_trace(
 )
   
   xz_mid <- make_xz_slice(
-    y0 = 0,
-    radius = input$reactor_radius,
-    length_z = input$reactor_length,
-    lamp_df = lamps(),
-    power = input$lamp_power,
-    mu = input$mu,
-    nx = 100,
-    nz = 180
-  )
-  
-  p <- p %>%
-add_trace(
-  data = xy_mid,
-  type = "scatter3d",
-  mode = "markers",
-  x = ~x,
-  y = ~y,
-  z = ~z,
-  marker = list(
-    size = 3,
-    opacity = 0.65,
-    color = ~intensity,
-    colorscale = list(
-      c(0.00, "#1b0c41"),
-      c(0.25, "#3b528b"),
-      c(0.50, "#21918c"),
-      c(0.75, "#5ec962"),
-      c(1.00, "#fde725")
-    ),
-    cmin = 0,
-    cmax = input$color_max
-  ),
-  showlegend = FALSE
+  y0 = 0,
+  radius = input$reactor_radius,
+  length_z = input$reactor_length,
+  lamp_df = lamps(),
+  power = input$lamp_power,
+  mu = input$mu,
+  nx = 100,
+  nz = 180
 )
+
+p <- p %>%
+  add_trace(
+    data = xz_mid,
+    type = "scatter3d",
+    mode = "markers",
+    x = ~x,
+    y = ~y,
+    z = ~z,
+    marker = list(
+      size = 2.2,
+      opacity = 0.55,
+      color = ~intensity,
+      colorscale = list(
+        c(0.00, "#1b0c41"),
+        c(0.25, "#3b528b"),
+        c(0.50, "#21918c"),
+        c(0.75, "#5ec962"),
+        c(1.00, "#fde725")
+      ),
+      cmin = 0,
+      cmax = input$color_max
+    ),
+    showlegend = FALSE
+  )
   
 
 
