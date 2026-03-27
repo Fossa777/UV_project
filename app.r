@@ -8,17 +8,40 @@ library(dplyr)
 
 # Координаты ламп внутри цилиндра
 make_lamp_positions <- function(n, reactor_radius, lamp_offset_ratio = 0.55) {
-  if (n <= 1) {
+  n <- as.integer(n)
+
+  if (is.na(n) || n < 1) {
+    return(data.frame(x = numeric(0), y = numeric(0)))
+  }
+
+  # 1 лампа — в центре
+  if (n == 1) {
     return(data.frame(x = 0, y = 0))
-  } 
-  
+  }
+
   r <- reactor_radius * lamp_offset_ratio
-  ang <- seq(0, 2 * pi, length.out = n + 1)[-(n + 1)]
-  
-  data.frame(
+
+  # 2 и 3 — по окружности
+  if (n <= 3) {
+    ang <- seq(0, 2 * pi, length.out = n + 1)[-(n + 1)]
+    return(data.frame(
+      x = r * cos(ang),
+      y = r * sin(ang)
+    ))
+  }
+
+  # 4 и больше — одна в центре, остальные по окружности
+  n_outer <- n - 1
+  ang <- seq(0, 2 * pi, length.out = n_outer + 1)[-(n_outer + 1)]
+
+  outer <- data.frame(
     x = r * cos(ang),
     y = r * sin(ang)
   )
+
+  center <- data.frame(x = 0, y = 0)
+
+  rbind(center, outer)
 }
 
 # Интенсивность от линейной лампы, ориентированной вдоль оси z
@@ -170,27 +193,53 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      sliderInput("color_max", "Максимум цветовой шкалы", min = 1, max = 100, value = 25, step = 1),
+      width = 3,
+      checkboxInput("show_slices_3d", "Показать срезы в 3D", FALSE),
+      sliderInput("color_max", "Максимум цветовой шкалы", min = 1, max = 100, value = 100, step = 1),
       sliderInput("reactor_length", "Длина реактора", min = 4, max = 20, value = 10, step = 1),
       sliderInput("reactor_radius", "Радиус реактора", min = 0.4, max = 3, value = 1.2, step = 0.1),
-      sliderInput("n_lamps", "Количество ламп", min = 1, max = 8, value = 2, step = 1),
+      sliderInput("n_lamps", "Количество ламп", min = 1, max = 8, value = 4, step = 1),
       sliderInput("lamp_power", "Условная мощность лампы", min = 0.5, max = 10, value = 3, step = 0.5),
       sliderInput("mu", "Ослабление в воде", min = 0.0, max = 2.0, value = 0.25, step = 0.05),
       sliderInput("swirl", "Закрутка потока", min = 0, max = 3, value = 0.8, step = 0.1),
-      sliderInput("n_points", "Точек поля", min = 500, max = 5000, value = 1800, step = 100),
-      sliderInput("n_particles", "Частиц потока", min = 5, max = 80, value = 25, step = 1),
+      sliderInput("n_points", "Точек поля", min = 500, max = 5000, value = 1000, step = 100),
+      sliderInput("n_particles", "Частиц потока", min = 5, max = 80, value = 5, step = 1),
       checkboxInput("show_surface", "Показать корпус реактора", TRUE),
       checkboxInput("show_field", "Показать поле интенсивности", TRUE),
-      checkboxInput("show_particles", "Показать траектории", TRUE)
+      checkboxInput("show_particles", "Показать траектории", FALSE)
     ),
     
-    mainPanel(
-      tabsetPanel(
-        tabPanel("3D реактор", plotlyOutput("plot3d", height = "750px")),
-        tabPanel("Центральный срез", plotlyOutput("slicePlot", height = "700px")),
-        tabPanel("Сводка", tableOutput("summaryTable"))
+mainPanel(
+  width = 9,
+  fluidRow(
+    
+    # ЛЕВАЯ ЧАСТЬ — 3D (50%)
+    column(
+      width = 6,
+      plotlyOutput("plot3d", height = "750px")
+    ),
+    
+    # ПРАВАЯ ЧАСТЬ — 2 СРЕЗА (50%)
+    column(
+      width = 6,
+      
+      fluidRow(
+        column(
+          width = 12,
+          plotlyOutput("topSlice", height = "370px")
+        )
+      ),
+      
+      fluidRow(
+        column(
+          width = 12,
+          plotlyOutput("longSlice", height = "370px")
+        )
       )
+      
     )
+  )
+)
   )
 )
 
@@ -200,14 +249,96 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-
-
-  lamps <- reactive({
-    make_lamp_positions(
-      n = input$n_lamps,
-      reactor_radius = input$reactor_radius
+output$topSlice <- renderPlotly({
+  
+  xy <- make_xy_slice(
+    z0 = input$reactor_length * 0.5,
+    radius = input$reactor_radius,
+    lamp_df = lamps(),
+    power = input$lamp_power,
+    mu = input$mu,
+    n = 150
+  )
+  
+  plot_ly(
+    data = xy,
+    x = ~x,
+    y = ~y,
+    z = ~intensity,
+    hoverinfo = "skip",
+    type = "heatmap",
+    zmin = 0,
+    zmax = input$color_max,
+    colors = colorRamp(c("#1b0c41", "#3b528b", "#21918c", "#5ec962", "#fde725"))
+  ) %>%
+    layout(
+      title = "Срез сверху (XY)",
+      xaxis = list(
+        title = "X",
+        scaleanchor = "y",
+        scaleratio = 1,
+        fixedrange = TRUE
+      ),
+      yaxis = list(
+        title = "Y",
+        fixedrange = TRUE
+      )
+    ) %>%
+    config(
+      displayModeBar = FALSE,
+      staticPlot = TRUE
     )
-  })
+})
+
+ output$longSlice <- renderPlotly({
+  
+  xz <- make_xz_slice(
+    y0 = 0,
+    radius = input$reactor_radius,
+    length_z = input$reactor_length,
+    lamp_df = lamps(),
+    power = input$lamp_power,
+    mu = input$mu,
+    nx = 140,
+    nz = 220
+  )
+  
+  plot_ly(
+    data = xz,
+    x = ~z,
+    y = ~x,
+    z = ~intensity,
+    hoverinfo = "skip",
+    type = "heatmap",
+    zmin = 0,
+    zmax = input$color_max,
+    colors = colorRamp(c("#1b0c41", "#3b528b", "#21918c", "#5ec962", "#fde725"))
+  ) %>%
+    layout(
+      title = "Продольный срез (XZ)",
+      xaxis = list(
+        title = "Длина (z)",
+        fixedrange = TRUE
+      ),
+      yaxis = list(
+        title = "Сечение (x)",
+        fixedrange = TRUE
+      )
+    ) %>%
+    config(
+      displayModeBar = FALSE,
+      staticPlot = TRUE
+    )
+})
+  
+  
+  lamps <- reactive({
+  make_lamp_positions(
+    n = as.integer(input$n_lamps),
+    reactor_radius = input$reactor_radius
+  )
+})
+
   
   field_points <- reactive({
     pts <- sample_points_in_cylinder(
@@ -257,7 +388,7 @@ server <- function(input, output, session) {
   })
   
   output$plot3d <- renderPlotly({
-    p <- plot_ly()
+    p <- plot_ly(hoverinfo = "none")
     
     # Корпус реактора
     if (isTRUE(input$show_surface)) {
@@ -277,6 +408,7 @@ server <- function(input, output, session) {
           x = ~x_mat,
           y = ~y_mat,
           z = ~z_mat,
+          color = "#3b528b",
           opacity = 0.15,
           showscale = FALSE
         )
@@ -310,90 +442,98 @@ add_markers(
     }
     
     # Лампы
-    lamp_df <- lamps()
-    for (i in seq_len(nrow(lamp_df))) {
-      p <- p %>%
-        add_trace(
-          type = "scatter3d",
-          mode = "lines",
-          x = c(lamp_df$x[i], lamp_df$x[i]),
-          y = c(lamp_df$y[i], lamp_df$y[i]),
-          z = c(0, input$reactor_length),
-          line = list(width = 12, color = "gold"),
-          name = paste("Лампа", i),
-          showlegend = FALSE
-        )
-    }
+lamp_df <- lamps()
     
-xy_mid <- make_xy_slice(
-    z0 = input$reactor_length * 0.5,
+if (nrow(lamp_df) > 0) {
+  for (i in seq_len(nrow(lamp_df))) {
+    p <- p %>%
+      add_trace(
+        type = "scatter3d",
+        mode = "lines",
+        x = c(lamp_df$x[i], lamp_df$x[i]),
+        y = c(lamp_df$y[i], lamp_df$y[i]),
+        z = c(0, input$reactor_length),
+        line = list(width = 12, color = "gold"),
+        name = paste("Лампа", i),
+        showlegend = FALSE
+      )
+  }
+}
+    
+if (isTRUE(input$show_slices_3d)) {
+
+  xy_mid <- make_xy_slice(
+    z0 = input$reactor_length * 0.9,
     radius = input$reactor_radius,
     lamp_df = lamps(),
     power = input$lamp_power,
     mu = input$mu,
     n = 100
   )
-  
+
   p <- p %>%
-add_trace(
-  data = xy_mid,
-  type = "scatter3d",
-  mode = "markers",
-  x = ~x,
-  y = ~y,
-  z = ~z,
-  marker = list(
-    size = 3,
-    opacity = 0.65,
-    color = ~intensity,
-    colorscale = list(
+    add_trace(
+      data = xy_mid,
+      type = "scatter3d",
+      mode = "markers",
+      x = ~x,
+      y = ~y,
+      z = ~z,
+      marker = list(
+        size = 4,
+        opacity = 0.65,
+        color = ~intensity,
+        colorscale = list(
       c(0.00, "#1b0c41"),
       c(0.25, "#3b528b"),
       c(0.50, "#21918c"),
       c(0.75, "#5ec962"),
       c(1.00, "#fde725")
     ),
-    cmin = 0,
-    cmax = input$color_max
-  ),
-  showlegend = FALSE
-)
-  
-  xz_mid <- make_xz_slice(
-  y0 = 0,
-  radius = input$reactor_radius,
-  length_z = input$reactor_length,
-  lamp_df = lamps(),
-  power = input$lamp_power,
-  mu = input$mu,
-  nx = 100,
-  nz = 180
-)
-
-p <- p %>%
-  add_trace(
-    data = xz_mid,
-    type = "scatter3d",
-    mode = "markers",
-    x = ~x,
-    y = ~y,
-    z = ~z,
-    marker = list(
-      size = 2.2,
-      opacity = 0.55,
-      color = ~intensity,
-      colorscale = list(
-        c(0.00, "#1b0c41"),
-        c(0.25, "#3b528b"),
-        c(0.50, "#21918c"),
-        c(0.75, "#5ec962"),
-        c(1.00, "#fde725")
+        cmin = 0,
+        cmax = input$color_max
       ),
-      cmin = 0,
-      cmax = input$color_max
-    ),
-    showlegend = FALSE
+      showlegend = FALSE
+    )
+
+  xz_mid <- make_xz_slice(
+    y0 = 0,
+    radius = input$reactor_radius,
+    length_z = input$reactor_length,
+    lamp_df = lamps(),
+    power = input$lamp_power,
+    mu = input$mu,
+    nx = 100,
+    nz = 600
   )
+
+  p <- p %>%
+    add_trace(
+      data = xz_mid,
+      type = "scatter3d",
+      mode = "markers",
+      x = ~x,
+      y = ~y,
+      z = ~z,
+      marker = list(
+        size = 4,
+        opacity = 0.55,
+        color = ~intensity,
+        colorscale = list(
+      c(0.00, "#1b0c41"),
+      c(0.25, "#3b528b"),
+      c(0.50, "#21918c"),
+      c(0.75, "#5ec962"),
+      c(1.00, "#fde725")
+    ),
+        cmin = 0,
+        cmax = input$color_max
+      ),
+      showlegend = FALSE
+    )
+}    
+    
+    
   
 
 
@@ -443,6 +583,8 @@ p %>%
   layout(
     paper_bgcolor = "#bdbdbd",
     plot_bgcolor  = "#bdbdbd",
+    dragmode = "turntable",
+    hovermode = "closest",
     scene = list(
       bgcolor = "#bdbdbd",
       xaxis = list(
@@ -465,10 +607,10 @@ p %>%
       ),
       aspectmode = "data",
       camera = list(
-  eye = list(x = 0, y = 0, z = 2.5),
-  up = list(x = 0, y = 1, z = 0),
+  eye = list(x = 4, y = 1, z = 0),
+  up = list(x = 0, y = 0, z = 0),
   center = list(x = 0, y = 0, z = 0),
-  projection = list(type = "orthographic")
+  projection = list(type = "perspective")
 )
     ),
     margin = list(l = 0, r = 0, b = 0, t = 0)
