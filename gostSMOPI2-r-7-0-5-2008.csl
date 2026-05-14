@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0" default-locale="ru-RU">
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0" default-locale="en-EN">
   <info>
-    <title>Russian SMOPI GOST R 7.0.5-2008 (Ру́сский)</title>
-    <id>http://www.zotero.org/styles/gostSMOPI-r-7-0-5-2008</id>
+    <title>Russian SMOPI2 GOST R 7.0.5-2008 (Ру́сский)</title>
+    <id>http://www.zotero.org/styles/gostSMOPI2-r-7-0-5-2008</id>
     <link href="http://www.zotero.org/styles/gost-r-7-0-5-2008" rel="self"/>
     <link href="http://chetvericov.ru/stil-oformleniya-dlya-mendeley-i-zotero-csl-po-gost-r-705-2008/" rel="documentation"/>
     <link href="http://protect.gost.ru/document.aspx?control=7&amp;id=173511" rel="documentation"/>
@@ -13,7 +13,7 @@
     </author>
     <category citation-format="author-date"/>
     <category field="generic-base"/>
-    <summary>Russian Fossa GOST-2008 style.</summary>
+    <summary>Russian SMOPI GOST-2008 style.</summary>
     <updated>2025-08-22T03:08:45+00:00</updated>
     <rights license="http://creativecommons.org/licenses/by-sa/3.0/">This work is licensed under a Creative Commons Attribution-ShareAlike 3.0 License</rights>
   </info>
@@ -56,14 +56,13 @@
     <text variable="title"/>
   </macro>
   <macro name="publisher">
-    <group>
-      <text variable="publisher-place"/>
-      <text value=": "/>
-      <text variable="publisher"/>
-    </group>
-    <text macro="year-date" suffix="." prefix=", "/>
-    <text variable="edition" prefix=" Вып. "/>
-  </macro>
+  <group delimiter=": ">
+    <text variable="publisher-place"/>
+    <text variable="publisher"/>
+  </group>
+  <text macro="year-date" prefix=", "/>
+  <text variable="edition" prefix=". Вып. "/>
+</macro>
   <macro name="year-date">
     <date variable="issued">
       <date-part name="year"/>
@@ -74,7 +73,7 @@
     <text value="Z999"/>
   </macro>
   <macro name="citation-number">
-    <text variable="citation-number" suffix=". "/>
+    <text variable="citation-number" suffix=")&#9;"/>
   </macro>
   <citation et-al-min="4" et-al-use-first="1" disambiguate-add-year-suffix="true">
     <sort>
@@ -115,55 +114,56 @@
     <choose>
       <!-- КНИГИ -->
       <if type="bill book graphic legal_case legislation motion_picture report song" match="any">
-        <text macro="title"/>
-        <text value=". – "/>
-        <text variable="publisher-place"/>
-        <text value=": "/>
-        <text variable="publisher"/>
-        <text value=", "/>
-        <text macro="year-date"/>
-        <text value=". – "/>
-        <text variable="number-of-pages"/>
-        <text value=" с"/>
-      </if>
+  <text macro="title"/>
+  <group prefix=". – " delimiter=", ">
+    <group delimiter=": ">
+      <text variable="publisher-place"/>
+      <text variable="publisher"/>
+    </group>
+    <text macro="year-date"/>
+  </group>
+  <text variable="number-of-pages" prefix=". – " suffix=" с"/>
+</if>
 
       <!-- ГЛАВА / МАТЕРИАЛЫ КОНФЕРЕНЦИИ -->
       <else-if type="chapter paper-conference" match="any">
-        <text macro="title"/>
-        <text value=" // "/>
-        <text variable="container-title"/>
-        <text value=". – "/>
-        <text variable="publisher-place"/>
-        <text value=": "/>
-        <text variable="publisher"/>
-        <text value=", "/>
-        <text macro="year-date"/>
-        <text value=". – С. "/>
-        <text variable="page"/>
-      </else-if>
+  <text macro="title"/>
+  <text variable="container-title" prefix=" // "/>
+  <group prefix=". – " delimiter=", ">
+    <group delimiter=": ">
+      <text variable="publisher-place"/>
+      <text variable="publisher"/>
+    </group>
+    <text macro="year-date"/>
+  </group>
+  <text variable="page" prefix=". – С. "/>
+</else-if>
 
       <!-- СТАТЬИ -->
       <else-if type="article-journal article-magazine article-newspaper" match="any">
-        <text macro="title"/>
-        <text value=" // "/>
-        <text variable="container-title"/>
-        <text value=". "/>
-        <text macro="year-date"/>
-        <text value=". "/>
-        <choose>
-          <if locale="ru">
-            <text variable="volume" prefix="Т. " suffix=", "/>
-            <text variable="issue" prefix="№ " suffix=". "/>
-            <text variable="page" prefix="С. "/>
-          </if>
-          <else>
-            <text variable="volume" prefix="Vol. " suffix=", "/>
-            <text variable="issue" prefix="№ " suffix=". "/>
-            <text variable="page" prefix="P. "/>
-          </else>
-        </choose>
-        <text variable="DOI" prefix=". DOI: https://doi.org/"/>
-      </else-if>
+  <text macro="title"/>
+  <text variable="container-title" prefix=" // "/>
+  <text macro="year-date" prefix=". "/>
+
+  <choose>
+    <if locale="ru">
+      <group prefix=". " delimiter=", ">
+        <text variable="volume" prefix="Т. "/>
+        <text variable="issue" prefix="№ "/>
+      </group>
+      <text variable="page" prefix=". С. "/>
+    </if>
+    <else>
+      <group prefix=". " delimiter=", ">
+        <text variable="volume" prefix="Vol. "/>
+        <text variable="issue" prefix="No. "/>
+      </group>
+      <text variable="page" prefix=". P. "/>
+    </else>
+  </choose>
+
+  <text variable="DOI" prefix=". DOI: https://doi.org/"/>
+</else-if>
 
       <!-- ИНТЕРНЕТ-РЕСУРСЫ -->
       <else-if type="webpage post-weblog" match="any">
@@ -182,17 +182,29 @@
 
       <!-- ПРОЧЕЕ -->
       <else>
-        <text macro="title"/>
-        <text value=" // "/>
-        <text variable="container-title"/>
-        <text value=". "/>
-        <text macro="year-date"/>
-        <text value=". "/>
-        <text variable="volume" prefix="Т. " suffix=", "/>
-        <text variable="issue" prefix="№ " suffix=". "/>
-        <text variable="page" prefix="С. "/>
-        <text variable="DOI" prefix=". DOI: https://doi.org/"/>
-      </else>
+  <text macro="title"/>
+  <text variable="container-title" prefix=" // "/>
+  <text macro="year-date" prefix=". "/>
+
+  <choose>
+    <if locale="ru">
+      <group prefix=". " delimiter=", ">
+        <text variable="volume" prefix="Т. "/>
+        <text variable="issue" prefix="№ "/>
+      </group>
+      <text variable="page" prefix=". С. "/>
+    </if>
+    <else>
+      <group prefix=". " delimiter=", ">
+        <text variable="volume" prefix="Vol. "/>
+        <text variable="issue" prefix="No. "/>
+      </group>
+      <text variable="page" prefix=". P. "/>
+    </else>
+  </choose>
+
+  <text variable="DOI" prefix=". DOI: https://doi.org/"/>
+</else>
     </choose>
   </layout>
 </bibliography>
